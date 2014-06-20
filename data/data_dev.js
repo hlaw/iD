@@ -13,7 +13,6 @@ iD.data = {
             path + 'data/presets/defaults.json',
             path + 'data/presets/categories.json',
             path + 'data/presets/fields.json',
-            path + 'data/imperial.json',
             path + 'data/feature-icons.json',
             path + 'data/operations-sprite.json',
             path + 'data/locales.json',
@@ -34,14 +33,13 @@ iD.data = {
                     categories: data[6],
                     fields: data[7]
                 },
-                imperial: data[8],
-                featureIcons: data[9],
-                operations: data[10],
-                locales: data[11],
-                en: data[12],
-                suggestions: data[13],
-                addressFormats: data[14],
-                worldGrid: data[15]
+                featureIcons: data[8],
+                operations: data[9],
+                locales: data[10],
+                en: data[11],
+                suggestions: data[12],
+                addressFormats: data[13],
+                worldGrid: data[14]
             };
 
             callback();

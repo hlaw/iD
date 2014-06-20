@@ -241,7 +241,6 @@ fs.writeFileSync('data/data.js', 'iD.data = ' + stringify({
         categories: rp('categories.json'),
         fields: rp('fields.json')
     },
-    imperial: r('imperial.json'),
     featureIcons: r('feature-icons.json'),
     operations: r('operations-sprite.json'),
     locales: r('locales.json'),
