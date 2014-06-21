@@ -74,8 +74,28 @@ window.iD = function () {
 
     /* Country Code */
     context.countryCode = function(_) {
+        function localLoad (d) {
+            presets.load(d);
+            context.loadSuggestions(d);
+        }
         if (!arguments.length) return countryCode;
-        countryCode = _;
+        if (countryCode !== _) {
+            var d = {};
+            countryCode = _;
+            if ((countryCode !== '') && (countryCode !== 'None')) {
+                var localPresetsPath = context.assetPath() + 'presets/' + countryCode.replace(/\:|\;/g, '_') + '.json';
+                d3.json(localPresetsPath, function(err, result) {
+                    if (!err) {
+                        d.suggestions = result.suggestions;
+                        localLoad(d);
+                    } else {
+                        localLoad({});
+                    }
+                });
+            } else {
+                localLoad({});
+            }
+        }
         return context;
     };
 
@@ -235,6 +255,28 @@ window.iD = function () {
 
     context.presets = function() {
         return presets;
+    };
+
+    var suggestions = {};
+    
+    context.suggestions = function() {
+        return suggestions;
+    };
+    
+    context.loadSuggestions = function(d) {
+        suggestions = {};
+        if (d.hasOwnProperty('suggestions')) {
+            _.forEach(d.suggestions, function(d, id) {
+                var s = id.match(/^([^\/]*)\/([^\/]*)\/(.*)$/);
+                if (s) {
+                    if (!suggestions.hasOwnProperty(s[1])) suggestions[s[1]] = {};
+                    if (!suggestions[s[1]].hasOwnProperty([s[2]])) {
+                        suggestions[s[1]][s[2]] = [];
+                    }
+                    suggestions[s[1]][s[2]].push(s[3]);
+                }
+            });
+        }
     };
 
     context.container = function(_) {

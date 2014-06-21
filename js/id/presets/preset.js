@@ -1,4 +1,4 @@
-iD.presets.Preset = function(id, preset, fields) {
+iD.presets.Preset = function(id, preset, fields, local) {
     preset = _.clone(preset);
 
     preset.id = id;
@@ -110,5 +110,9 @@ iD.presets.Preset = function(id, preset, fields) {
         return tags;
     };
 
+    if (typeof local !== 'undefined') {
+        preset.local = local;
+    }
+    
     return preset;
 };

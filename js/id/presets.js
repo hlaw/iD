@@ -72,6 +72,17 @@ iD.presets = function() {
             };
         }
 
+        if (d.suggestions) {
+            // Remove existing suggestions if any
+            all.clearLocal();
+            recent.clearLocal();
+            
+            _.forEach(d.suggestions, function(d, id) {
+                // Add to collection
+                all.collection.push(iD.presets.Preset(id, d, fields, true));
+            });
+        }
+
         for (var i = 0; i < all.collection.length; i++) {
             var preset = all.collection[i],
                 geometry = preset.geometry;

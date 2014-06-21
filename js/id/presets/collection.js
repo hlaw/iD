@@ -115,7 +115,15 @@ iD.presets.Collection = function(collection) {
             return iD.presets.Collection(_.unique(
                     results.concat(other)
                 ));
+        },
+        
+        clearLocal: function () {
+            var removedPresets = _.remove(collection, function(a) {
+                return a.local === true;
+            });
+            return removedPresets;
         }
+        
     };
 
     return presets;

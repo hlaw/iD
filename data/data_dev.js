@@ -17,7 +17,6 @@ iD.data = {
             path + 'data/operations-sprite.json',
             path + 'data/locales.json',
             path + 'dist/locales/en.json',
-            path + 'data/name-suggestions.json',
             path + 'data/address-formats.json',
             path + 'dist/tiles/worldgrid.json'
             ], d3.json, function (err, data) {
@@ -37,9 +36,8 @@ iD.data = {
                 operations: data[9],
                 locales: data[10],
                 en: data[11],
-                suggestions: data[12],
-                addressFormats: data[13],
-                worldGrid: data[14]
+                addressFormats: data[12],
+                worldGrid: data[13]
             };
 
             callback();
