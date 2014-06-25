@@ -75,8 +75,28 @@ window.iD = function () {
 
     /* Country Code */
     context.countryCode = function(_) {
+        function localLoad (data) {
+            presets.load(data);
+            context.loadSuggestions(data);
+        }
         if (!arguments.length) return countryCode;
-        countryCode = _;
+        if (countryCode !== _) {
+            var d = {};
+            countryCode = _;
+            if ((countryCode !== '') && (countryCode !== 'None')) {
+                var localPresetsPath = context.assetPath() + 'presets/' + countryCode.replace(/\:|\;/g, '_') + '.json';
+                d3.json(localPresetsPath, function(err, result) {
+                    if (!err) {
+                        d.suggestions = result.suggestions;
+                        localLoad(d);
+                    } else {
+                        localLoad({});
+                    }
+                });
+            } else {
+                localLoad({});
+            }
+        }
         return context;
     };
 
@@ -263,6 +283,33 @@ window.iD = function () {
 
     context.presets = function() {
         return presets;
+    };
+
+    var suggestions = {};
+    
+    context.suggestions = function() {
+        return suggestions;
+    };
+    
+    context.loadSuggestions = function(d) {
+        suggestions = {};
+        if (d.hasOwnProperty('suggestions')) {
+            var re = /^([^\/]*)\/([^\/]*)\/(.*)$/g;
+            _.forEach(d.suggestions, function(d, id) {
+                var s = re.exec(id);
+                if (s) {
+                    if (!suggestions.hasOwnProperty(s[1])) suggestions[s[1]] = {};
+                    if (!suggestions[s[1]].hasOwnProperty([s[2]])) {
+                        suggestions[s[1]][s[2]] = [];
+                    }
+                    suggestions[s[1]][s[2]].push({
+                        string: s[3],
+                        split: iD.util.uniSplit(s[3]),
+                        count: d.count
+                    });
+                }
+            });
+        }
     };
 
     context.container = function(_) {

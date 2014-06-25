@@ -84,7 +84,7 @@ iD.ui.PresetList = function(context) {
             .attr('type', 'search')
             .on('keydown', keydown)
             .on('keypress', keypress)
-            .on('input', inputevent);
+            .on('input', _.debounce(inputevent,400));
 
         searchWrap.append('span')
             .attr('class', 'icon search');

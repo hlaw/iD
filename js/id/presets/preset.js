@@ -1,4 +1,4 @@
-iD.presets.Preset = function(id, preset, fields) {
+iD.presets.Preset = function(id, preset, fields, local) {
     preset = _.clone(preset);
 
     preset.id = id;
@@ -48,6 +48,16 @@ iD.presets.Preset = function(id, preset, fields) {
         return preset.t('terms', {'default': ''}).split(',');
     };
 
+    var canon = preset.hasOwnProperty('canon')? preset.canon : [];
+    preset.canon = function() {
+        return canon;
+    };
+
+    var count = preset.hasOwnProperty('count')? preset.count : 50;
+    preset.count = function() {
+        return count;
+    };
+    
     preset.isFallback = function() {
         return Object.keys(preset.tags).length === 0;
     };
@@ -110,5 +120,9 @@ iD.presets.Preset = function(id, preset, fields) {
         return tags;
     };
 
+    if (typeof local !== 'undefined') {
+        preset.local = local;
+    }
+    
     return preset;
 };

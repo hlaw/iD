@@ -22,100 +22,120 @@ iD.presets.Collection = function(collection) {
         search: function(value, geometry) {
             if (!value) return this;
 
-            value = value.toLowerCase();
-
+            value = value.toLowerCase().trim();
+            
+            var shortv = (value.length < 4);
+            if (value.match(/[\u3400-\u9FAF]/)) shortv = (value.length < 2);
+            
             var searchable = _.filter(collection, function(a) {
-                return a.searchable !== false && a.suggestion !== true;
+                return (((typeof a.searchable === 'undefined') || a.searchable !== false) && ((typeof a.suggestion === 'undefined') || !a.suggestion));
             }),
             suggestions = _.filter(collection, function(a) {
-                return a.suggestion === true;
+                return ((typeof a.suggestion !== 'undefined') && a.suggestion === true);
             });
 
-            // matches value to preset.name
-            var leading_name = _.filter(searchable, function(a) {
-                    return leading(a.name().toLowerCase());
-                }).sort(function(a, b) {
-                    var i = a.name().toLowerCase().indexOf(value) - b.name().toLowerCase().indexOf(value);
-                    if (i === 0) return a.name().length - b.name().length;
-                    else return i;
-                });
-
-            // matches value to preset.terms values
-            var leading_terms = _.filter(searchable, function(a) {
-                return _.any(a.terms() || [], leading);
-            });
-
-            function leading(a) {
-                var index = a.indexOf(value);
-                return index === 0 || a[index - 1] === ' ';
+            // Function to determine search matching and ranking behavior
+            // return a distance metric, or 9999 if edit distance higher than threshold
+            function calcDist(a) {
+                // allow no error for short strings, 1 for others
+                return iD.util.suggestEditDistance(value, a, shortv ? 0 : 1);
             }
 
+            function minmap(preset, names) {
+                return {
+                    preset: preset,
+                    dist: _.min(names.map(function(b) {
+                        return _.min(
+                            iD.util.uniSplit(b).map(function(c) {
+                                return ({
+                                    dist: calcDist(c.str),
+                                    pos: c.pos
+                                });
+                            }), 'dist');
+                        }), 'dist')
+                };
+            }
+            
             // finds close matches to value in preset.name
             var levenstein_name = searchable.map(function(a) {
-                    return {
-                        preset: a,
-                        dist: iD.util.editDistance(value, a.name().toLowerCase())
-                    };
-                }).filter(function(a) {
-                    return a.dist + Math.min(value.length - a.preset.name().length, 0) < 3;
-                }).sort(function(a, b) {
-                    return a.dist - b.dist;
-                }).map(function(a) {
-                    return a.preset;
-                });
-
+                var ret = minmap(a, [a.name()]);
+                ret.matchname = true;
+                return ret;
+            }).filter(function(a) {
+                return a.dist.dist < 9999;
+            });
+                           
             // finds close matches to value in preset.terms
-            var leventstein_terms = _.filter(searchable, function(a) {
-                    return _.any(a.terms() || [], function(b) {
-                        return iD.util.editDistance(value, b) + Math.min(value.length - b.length, 0) < 3;
-                    });
-                });
-
+            var leventstein_terms = searchable.map(function(a) {
+                if (!a.terms()) return null;
+                return minmap(a, a.terms());
+            }).filter(function(a) {
+                return (a !== null) && (a.dist.dist < 9999);
+            });
+               
             function suggestionName(name) {
                 var nameArray = name.split(' - ');
                 if (nameArray.length > 1) {
                     name = nameArray.slice(0, nameArray.length-1).join(' - ');
                 }
-                return name.toLowerCase();
+                return name;
             }
 
-            var leading_suggestions = _.filter(suggestions, function(a) {
-                    return leading(suggestionName(a.name()));
-                }).sort(function(a, b) {
-                    a = suggestionName(a.name());
-                    b = suggestionName(b.name());
-                    var i = a.indexOf(value) - b.indexOf(value);
-                    if (i === 0) return a.length - b.length;
-                    else return i;
-                });
-
             var leven_suggestions = suggestions.map(function(a) {
-                    return {
-                        preset: a,
-                        dist: iD.util.editDistance(value, suggestionName(a.name()))
-                    };
-                }).filter(function(a) {
-                    return a.dist + Math.min(value.length - suggestionName(a.preset.name()).length, 0) < 1;
-                }).sort(function(a, b) {
-                    return a.dist - b.dist;
-                }).map(function(a) {
+                var names = [suggestionName(a.name())].concat(a.canon());
+                return minmap(a, names);
+            }).filter(function(a) {
+                return a.dist.dist < 9999;
+            });
+                 
+            function laven_sort (a, b) {
+                var diff = a.dist.dist - b.dist.dist;
+                if (diff === 0) {
+                    diff = a.dist.pos - b.dist.pos;
+                } else return diff;
+                if (diff === 0) {
+                    // name matches first
+                    if ((typeof a.matchname === 'undefined') && (typeof b.matchname !== 'undefined')) {
+                        diff = 1;
+                    } else if ((typeof b.matchname === 'undefined') && (typeof a.matchname !== 'undefined')) {
+                        diff = -1;
+                    }
+                } else return diff;
+                if (diff === 0) {
+                    // the higher count first
+                    diff = b.preset.count() - a.preset.count();
+                } else return diff;
+                if (diff === 0) {
+                    diff = a.preset.name().length - b.preset.name().length;
+                }
+                return diff;
+            }
+                
+            var results_sugg = leven_suggestions
+                .sort(laven_sort)
+                .slice(0, maxSuggestionResults);
+            
+            var results = levenstein_name.concat(leventstein_terms, results_sugg)
+                .sort(laven_sort)
+                .map(function(a) {
                     return a.preset;
-                });
+                })
+                .slice(0, maxSearchResults-1);
 
             var other = presets.item(geometry);
-
-            var results = leading_name.concat(
-                            leading_terms,
-                            leading_suggestions.slice(0, maxSuggestionResults+5),
-                            levenstein_name,
-                            leventstein_terms,
-                            leven_suggestions.slice(0, maxSuggestionResults)
-                        ).slice(0, maxSearchResults-1);
 
             return iD.presets.Collection(_.unique(
                     results.concat(other)
                 ));
+        },
+        
+        clearLocal: function () {
+            var removedPresets = _.remove(collection, function(a) {
+                return (typeof a.local !== 'undefined') && (a.local === true);
+            });
+            return removedPresets;
         }
+        
     };
 
     return presets;

@@ -3,11 +3,10 @@ var fs = require('fs'),
     glob = require('glob'),
     YAML = require('js-yaml'),
     _ = require('./js/lib/lodash'),
-    d3 = require('d3'),
     jsonschema = require('jsonschema'),
     fieldSchema = require('./data/presets/schema/field.json'),
     presetSchema = require('./data/presets/schema/preset.json'),
-    suggestions = require('./data/name-suggestions.json');
+    nameSuggestions = require('./data/name-suggestions.json');
 
 function readtxt(f) {
     return fs.readFileSync(f, 'utf8');
@@ -32,7 +31,7 @@ function stringify(o) {
 function validate(file, instance, schema) {
     var result = jsonschema.validate(instance, schema);
     if (result.length) {
-        console.error(file + ": ");
+        console.error(file + ': ');
         result.forEach(function(error) {
             if (error.property) {
                 console.error(error.property + ' ' + error.message);
@@ -90,8 +89,9 @@ function generateFields() {
     return fields;
 }
 
-function suggestionsToPresets(presets) {
+function suggestionsToPresets(presets, suggestions) {
     var existing = {};
+    var localPresets = {};
 
     for (var key in suggestions) {
         for (var value in suggestions[key]) {
@@ -101,29 +101,39 @@ function suggestionsToPresets(presets) {
                     count = suggestions[key][value][name].count;
 
                 if (existing[name] && count > existing[name].count) {
-                    delete presets[existing[name].category];
+                    delete localPresets[existing[name].category];
                     delete existing[name];
                 }
                 if (!existing[name]) {
                     tags = _.extend({name: name}, suggestions[key][value][name].tags);
-                    addSuggestion(item, tags, name, count);
+                    if (suggestions[key][value][name].hasOwnProperty("canon")) {
+                        var canon = suggestions[key][value][name].canon;
+                        addSuggestion(item, tags, canon, name, count);
+                    } else {
+                        addSuggestion(item, tags, null, name, count);
+                    }
                 }
             }
         }
     }
 
-    function addSuggestion(category, tags, name, count) {
+    function addSuggestion(category, tags, canon, name, count) {
         var tag = category.split('/'),
             parent = presets[tag[0] + '/' + tag[1]];
 
-        presets[category] = {
+        localPresets[category] = {
             tags: parent.tags ? _.merge(tags, parent.tags) : tags,
             name: name,
             icon: parent.icon,
             geometry: parent.geometry,
             fields: parent.fields,
+            count: count,
             suggestion: true
         };
+
+        if (canon) {
+            localPresets[category].canon = canon;
+        }
 
         existing[name] = {
             category: category,
@@ -131,7 +141,7 @@ function suggestionsToPresets(presets) {
         };
     }
 
-    return presets;
+    return localPresets;
 }
 
 function generatePresets() {
@@ -167,17 +177,26 @@ function generatePresets() {
         presets[id] = preset;
     });
 
-    presets = _.merge(presets, suggestionsToPresets(presets));
-
     var presetsYaml = _.cloneDeep(translations);
     _.forEach(presetsYaml.presets, function(preset) {
-        preset.terms = "<translate with synonyms or related terms for '" + preset.name + "', separated by commas>"
+        preset.terms = "<translate with synonyms or related terms for '" + preset.name + "', separated by commas>";
     });
 
+    // generate local presents
+    var suggestionPresets = {};
+
+    for (var code in nameSuggestions) {
+        if (nameSuggestions.hasOwnProperty(code)) {
+            suggestionPresets[code] =
+                suggestionsToPresets(presets, nameSuggestions[code]);
+        }
+    }
+  
     return {
         presets: presets,
         areaKeys: areaKeys,
-        presetsYaml: presetsYaml
+        presetsYaml: presetsYaml,
+        suggestionPresets : suggestionPresets
     };
 }
 
@@ -195,8 +214,6 @@ function validateCategoryPresets(categories, presets) {
 }
 
 function validatePresetFields(presets, fields) {
-    var presets = rp('presets.json'),
-        fields = rp('fields.json');
     _.forEach(presets, function(preset) {
         if (preset.fields) {
             preset.fields.forEach(function(field) {
@@ -216,6 +233,11 @@ var categories = generateCategories(),
 // additional consistency checks
 validateCategoryPresets(categories, presets.presets);
 validatePresetFields(presets.presets, fields);
+for (var code in presets.suggestionPresets) {
+    if (presets.suggestionPresets.hasOwnProperty(code)) {
+        validatePresetFields(presets.suggestionPresets[code], fields);
+    }
+}
 
 // Save individual data files
 fs.writeFileSync('data/presets/categories.json', stringify(categories));
@@ -223,6 +245,14 @@ fs.writeFileSync('data/presets/fields.json', stringify(fields));
 fs.writeFileSync('data/presets/presets.json', stringify(presets.presets));
 fs.writeFileSync('js/id/core/area_keys.js', '/* jshint -W109 */\niD.areaKeys = ' + stringify(presets.areaKeys) + ';');
 fs.writeFileSync('data/presets.yaml', YAML.dump({en: {presets: presets.presetsYaml}}));
+
+// Save suggestion files
+for (var code in presets.suggestionPresets) {
+    if (presets.suggestionPresets.hasOwnProperty(code)) {
+        fs.writeFileSync ('dist/presets/'+ code.replace(/\:|\;/g, '_')+'.json',
+                          stringify({suggestions: presets.suggestionPresets[code]}));
+    }
+}
 
 // Push changes from data/core.yaml into en.json
 var core = YAML.load(fs.readFileSync('data/core.yaml', 'utf8'));
@@ -246,7 +276,6 @@ fs.writeFileSync('data/data.js', 'iD.data = ' + stringify({
     operations: r('operations-sprite.json'),
     locales: r('locales.json'),
     en: read('dist/locales/en.json'),
-    suggestions: r('name-suggestions.json'),
     addressFormats: r('address-formats.json'),
     worldGrid: read(__dirname + '/dist/tiles/worldgrid.json')
 }) + ';');

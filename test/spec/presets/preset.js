@@ -3,7 +3,12 @@ describe('iD.presets.Preset', function() {
         var preset = iD.presets.Preset('test', {});
         expect(preset.fields).to.eql([]);
     });
-
+    
+    it("has optional parameter to mark localised preset", function() {
+        var preset = iD.presets.Preset('test', {}, null, true);
+        expect(preset.local).to.eql(true);
+    });
+    
     describe('#matchGeometry', function() {
         it("returns false if it doesn't match", function() {
             var preset = iD.presets.Preset('test', {geometry: ['line']});

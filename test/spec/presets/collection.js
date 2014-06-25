@@ -20,10 +20,17 @@ describe("iD.presets.Collection", function() {
                 leisure: 'park'
             },
             geometry: ['point', 'area']
-        })
+        }),
+        suggestion: iD.presets.Preset('amenity/bank/AB Bank', {
+            tags: {
+                amenity: 'bank'
+            },
+            suggestion : true,
+            geometry: ['point']            
+        }, {}, true)
     };
 
-    var c = iD.presets.Collection([p.point, p.area, p.residential, p.park]),
+    var c = iD.presets.Collection([p.point, p.area, p.residential, p.park, p.suggestion]),
         n = iD.Node( { id: 'n1' }),
         w = iD.Way({ tags: { highway: 'residential' }}),
         g = iD.Graph().replace(w);
@@ -62,6 +69,12 @@ describe("iD.presets.Collection", function() {
                 }),
                 collection = iD.presets.Collection([excluded, p.point]);
             expect(collection.search("excluded", "point").collection).not.to.include(excluded);
+        });
+    });
+    
+    describe("#clearLocal", function() {
+        it("removes presets from collection marked with local=true", function() {
+            expect(c.clearLocal()).to.eql([p.suggestion]);
         });
     });
 });

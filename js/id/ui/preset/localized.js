@@ -18,7 +18,7 @@ iD.ui.preset.localized = function(field, context) {
         if (field.id === 'name') {
             var preset = context.presets().match(entity, context.graph());
             input.call(d3.combobox().fetcher(
-                iD.util.SuggestNames(preset, iD.data.suggestions)
+                iD.util.SuggestNames(preset, context.suggestions())
             ));
         }
 

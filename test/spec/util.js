@@ -24,6 +24,12 @@ describe('iD.Util', function() {
         expect(iD.util.getPrototypeOf(new a())).to.eql({ foo: 'foo' });
     });
 
+    it('#uniSplit', function() {
+        expect(iD.util.uniSplit('mno pqrs')).to.eql([{str:'mno pqrs', pos:0}, {str:'pqrs', pos:4}]);
+        expect(iD.util.uniSplit('mno-!-pqrs')).to.eql([{str:'mno-!-pqrs', pos:0}, {str:'pqrs', pos:6}]);
+        expect(iD.util.uniSplit('一二（三四）')).to.eql([{str:'一二（三四）', pos:0}, {str:'三四）', pos:3}]);
+    });
+
     describe('#editDistance', function() {
         it('returns zero for same strings', function() {
             expect(iD.util.editDistance('foo', 'foo')).to.eql(0);
@@ -39,6 +45,32 @@ describe('iD.Util', function() {
 
         it('does not fail on empty input', function() {
             expect(iD.util.editDistance('', '')).to.eql(0);
+        });
+    });
+
+    describe('#suggestEditDistance', function() {
+        it('returns zero for same strings', function() {
+            expect(iD.util.suggestEditDistance('foo', 'foo', 1)).to.eql(0);
+        });
+
+        it('reports an insertion of 1', function() {
+            expect(iD.util.suggestEditDistance('foo', 'faoo', 1)).to.eql(1);
+        });
+
+        it('reports a replacement of 1', function() {
+            expect(iD.util.suggestEditDistance('foob', 'fooa', 1)).to.eql(1);
+        });
+
+        it('counts only up to matching end of first string', function() {
+            expect(iD.util.suggestEditDistance('f1oo', 'fooa', 1)).to.eql(1);
+        });
+
+        it('reports fail if tolerance exceeded', function() {
+            expect(iD.util.suggestEditDistance('f1oo', 'fooa', 0)).to.eql(9999);
+        });
+
+        it('does not fail on empty input', function() {
+            expect(iD.util.suggestEditDistance('', '', 1)).to.eql(0);
         });
     });
 
