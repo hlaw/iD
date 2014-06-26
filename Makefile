@@ -33,6 +33,8 @@ dist/iD.js: \
 	js/lib/rbush.js \
 	js/lib/togeojson.js \
 	js/lib/marked.js \
+	js/lib/Blob.js\
+	js/lib/FileSaver.js\
 	js/id/start.js \
 	js/id/id.js \
 	js/id/services/*.js \

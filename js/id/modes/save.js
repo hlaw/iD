@@ -23,6 +23,7 @@ iD.modes.Save = function(context) {
                 loading.close();
                 if (err) {
                     var confirm = iD.ui.confirm(context.container());
+                    confirm.on('download', download);
                     confirm
                         .select('.modal-section.header')
                         .append('h3')
@@ -37,7 +38,19 @@ iD.modes.Save = function(context) {
                 }
             });
     }
+    
+    function download() {
+        var changesComplete = context.history().changesHeadComplete(
+                iD.actions.DiscardTags(context.history().difference()));
+        var osmjxon = context.connection().osmCompleteJXON(changesComplete);
+        var osm = JXON.stringify(osmjxon);
 
+        var blob = new Blob([osm], {type: 'text/plain;charset=utf-8'});
+        saveAs(blob, 'iDchanges.osm');
+       
+        context.enter(iD.modes.Browse(context));
+    }
+    
     function success(e, changeset_id) {
         context.enter(iD.modes.Browse(context)
             .sidebar(iD.ui.Success(context)

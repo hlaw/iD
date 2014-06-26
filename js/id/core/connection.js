@@ -204,7 +204,54 @@ iD.Connection = function() {
             }
         };
     };
+    
+    // Generate a change OSM file that can be consumed by JOSM
+    // 
+    connection.osmCompleteJXON = function(headComplete) {
+        
+        function nest(x, order) {
+            var groups = {};
+            for (var i = 0; i < x.length; i++) {
+                var tagName = Object.keys(x[i])[0];
+                if (!groups[tagName]) groups[tagName] = [];
+                groups[tagName].push(x[i][tagName]);
+            }
+            var ordered = {};
+            order.forEach(function(o) {
+                if (groups[o]) ordered[o] = groups[o];
+                else ordered[o] = [];
+            });
+            return ordered;
+        }
 
+        function rep(entity, action) {
+            var res = entity.asJXON(0);
+            var tagName = Object.keys(res)[0];
+            if (action) {
+                res[tagName]['@action'] = action;
+            }
+            return res;
+        }
+          
+        var ref = nest(_.map(headComplete.ref, function(entity){return rep(entity);}),
+                        ['node']);
+        var created = nest(_.map(headComplete.created, function(entity){return rep(entity);}),
+                        ['node', 'way', 'relation']);
+        var modified = nest(_.map(headComplete.modified, function(entity){return rep(entity, 'modify');}),
+                        ['node', 'way', 'relation']);
+        var deleted = nest(_.map(headComplete.deleted, function(entity){return rep(entity, 'delete');}),
+                        ['relation', 'way', 'node']);
+        return {
+            osm: {
+                '@version': 0.6,
+                '@generator': 'iD',
+                'node': ref.node.concat(created.node, modified.node, deleted.node),
+                'way': created.way.concat(modified.way, deleted.way),
+                'relation': created.relation.concat(modified.relation, deleted.relation)
+            }
+        };
+    };
+    
     connection.changesetTags = function(comment, imageryUsed) {
         var tags = {
             imagery_used: imageryUsed.join(';').substr(0, 255),
@@ -218,6 +265,10 @@ iD.Connection = function() {
         return tags;
     };
 
+    connection.putChangeset = function(changes, comment, imageryUsed, callback) {
+        return callback({responseText:'Sorry, this version always returns error in saving.'});
+    };
+/*
     connection.putChangeset = function(changes, comment, imageryUsed, callback) {
         oauth.xhr({
                 method: 'PUT',
@@ -242,7 +293,7 @@ iD.Connection = function() {
                 });
             });
     };
-
+*/
     var userDetails;
 
     connection.userDetails = function(callback) {

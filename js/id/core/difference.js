@@ -171,6 +171,48 @@ iD.Difference = function(base, head) {
 
         return result;
     };
+    
+    difference.headComplete = function() {
+        var result = {}, id, i, change;
+        var created = [];
+        var deleted = [];
+        var modified = [];
+        var ref = [];
+        var outref = [];
+
+        for (id in changes) {
+            change = changes[id];
+            if (change.base && !change.head) {
+                deleted.push(change.base);
+            } else {
+                if (change.base && change.head) {
+                    modified.push(change.head);
+                } else if (!change.base && change.head) {
+                    created.push(change.head);
+                }
+                if (change.head.type === 'way') {
+                   var hnodes = change.head.nodes;
+                   for (i = 0; i < hnodes.length; i++) {
+                       ref.push(head.hasEntity(hnodes[i]));
+                   }
+                }
+            }
+        }
+
+        for (i=0; i<ref.length; i++) {
+            if ((modified.indexOf(ref[i]) === -1) && (created.indexOf(ref[i]) === -1)) {
+                outref.push(ref[i]);
+            }
+        }
+        
+        result = {
+            created : created,
+            deleted : deleted,
+            modified : modified,
+            ref : outref
+        };
+        return result;
+    };
 
     return difference;
 };

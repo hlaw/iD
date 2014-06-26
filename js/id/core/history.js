@@ -148,7 +148,20 @@ iD.History = function(context) {
         hasChanges: function() {
             return this.difference().length() > 0;
         },
+        
+        changesHeadComplete: function(action) {
+            var base = stack[0].graph,
+                head = stack[index].graph;
+            
+            if (action) {
+                head = action(head);
+            }
+            
+            var difference = iD.Difference(base, head);
 
+            return difference.headComplete();
+        },
+        
         imageryUsed: function(sources) {
             if (sources) {
                 imageryUsed = sources;

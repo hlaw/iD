@@ -17,7 +17,9 @@
         "JXON": false,
         "osmAuth": false,
         "toGeoJSON": false,
-        "marked": false
+        "marked": false,
+        "Blob": false,
+        "saveAs": false
     },
     "browser": true,
     "unused": true,
